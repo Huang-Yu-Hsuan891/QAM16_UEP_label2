@@ -6,6 +6,9 @@
 unsigned long long SEED =  312891; // have value //unsigned long long SEED = 3881111387891;
 unsigned long long RANV;
 double Q=1.0;
+double d1;
+double d2=2.0;
+double alpha=1.04713;
 int RANI = 0;
 double Ranq1();
 void normal(double sig, double *n1, double *n2);
@@ -14,6 +17,8 @@ double table[8] = {0.65, 0.55, 0.45, 0.35, 0.25, 0.15, 0.05, 0};
 
 double minimum(double a1, double a2, double a3, double a4, double a5, double a6, double a7, double a8);
 void table_symbol(int i, int a, int b, int c, int d);
+void x_estimate_m(int i, double a, double b);
+void table_receive(int i, double a, double b);
 
 double **s;
 int srow = 1844;  // Na / 4 transmitt how many symbols (transmitter)
@@ -30,6 +35,8 @@ int receivesymcolumn = 4; //16QAM PRESENT 1symbol = 4bits
 
 int main() {
     // for declaration
+    d1=d2*alpha;
+    printf("d1 = %g",d1);
     int i, j, k, m;                  //for counting
     int n, rc;                       // n is column = 1024 and rc is row = 512
     //int dv, dc;                      // dv: column have #1  = 3 ; and dc: row have #1 = 6
@@ -68,8 +75,9 @@ int main() {
     int *u;
     int ulen = krc;
     int temp;     // for changing the order od M and L
-    double d1,d2,d3,d4,d5,d6,d7,d8;
+    double c1,c2,c3,c4,c5,c6,c7,c8;
     double s1,s2,s3,s4,s5,s6,s7,s8;
+    
 
 
     
@@ -215,11 +223,13 @@ printf("column = %d; row = %d\n", n, rc);
     double ebn0s = 5;//SNR
     double ebn0;
     double sigma;
+    double Es = (alpha*alpha+2*alpha+2)*d2*d2/2;
     //sigma = sqrt(5.0 / (pow(10, ebn0s / 10)));
-    sigma = sqrt(1.25 * 2 /* 1/R = 1/0.5 */ / (pow(10, ebn0s / 10)));
+    //sigma = sqrt(1.25 * 2 /* 1/R = 1/0.5 */ / (pow(10, ebn0s / 10)));
+    sigma = sqrt(Es / (4*(pow(10, ebn0s / 10))) );
     ebn0 = pow(10, ebn0s/10);
     printf("%g,%g \n", pow(10, ebn0s / 10), sigma);
-
+    double fers=0;
     // for CODE part
     // receive 100 error block
     double *Lj;             // LLR; LENGTH = 7376
@@ -298,8 +308,10 @@ printf("column = %d; row = %d\n", n, rc);
     double BER2;
     double FER1;
     double FER2;
+    double outd=d1/2+d2;
+    double ind=d1/2;
 
-    while (error_block < 100/*100*/) {
+    while (error_block < 50/*100*/) {
         for (i = 0; i < codarraylen; i++) codarray[i] = 0;
         //printf("yes");
         if (num == 0) {
@@ -320,132 +332,115 @@ printf("column = %d; row = %d\n", n, rc);
             for (i = 0; i < krc - 6; i++) u[i + 6] = (u[i + 1] + u[i]) % 2;
         }//for (i = 0; i < krc; i++) printf("u[%d] = %d ;", i, u[i]);
         num++;
-       // printf("codarraylen = %d ",codarraylen);
+        printf("codarraylen = %d ",codarraylen);
         for (i = 0; i < ulen; i++) 
             if (u[i] == 1) {
                 for (j = 0; j < n; j++) codarray[j] = (codarray[j] + G[i][j]) % 2;
             }//for (i = 0; i < codarraylen; i++) printf("codarray[%d] = %d ;", i, codarray[i]);
-        /*for (i = 0; i < symrow; i++)
+        for (i = 0; i < symrow; i++)
             for (j = 0; j < symcolumn; j++) {
                 sym[i][j] = codarray[4 * i + j];
-            }*/
-        for (i = 0; i < symrow; i++) {
-            sym[i][0] = codarray[2 * i];
-            sym[i][1] = codarray[2 * i+1];
-            sym[i][2] = codarray[2 * i+3688];
-            sym[i][3] = codarray[2 * i+3689];
-            if (i == 0) printf("codarray[0][0] = %d codarray[0][1] = %d codarray[0][2] = %d codarray[0][3] = %d codarray[0][3688] = %d codarray[0][3689] = %d \n", codarray[0],codarray[1],codarray[2],codarray[3],codarray[3688],codarray[3689]);
-            if (i == 0) printf("sym[0][0] = %d sym[0][1] = %d sym[0][2] = %d sym[0][3] = %d\n", sym[0][0],sym[0][1],sym[0][2],sym[0][3]);
-            if (i == 1) printf("sym[0][0] = %d sym[0][1] = %d sym[0][2] = %d sym[0][3] = %d\n", sym[1][0],sym[1][1],sym[1][2],sym[1][3]);
-        }
-        for (i = 0; i < srow; i++) table_symbol(i, sym[i][0], sym[i][1], sym[i][2], sym[i][3]);
+                //if (i == 0 || i == 10) printf("sym[%d][%d] = %d; ", i, j, sym[i][j]);
+            }
+        for (i = 0; i < srow; i++)
+            table_symbol(i, sym[i][0], sym[i][1], sym[i][2], sym[i][3]);
         for(i = 0; i < srow; i++) {
             normal(sigma, &x, &y);
             x_receive[i][0] = s[i][0] + x;
             x_receive[i][1] = s[i][1] + y;
-            if (i == 0 || i == 1) printf("x_receive[i][0] = %g x_receive[i][1] = %g\n",x_receive[i][0],x_receive[i][1]);
         }
-        int tempmin;
-        for (i = 0; i < Ljlen/2; i++) {
+        /*for (i = 0; i < xrow; i++) x_estimate_m(i,x_receive[i][0],x_receive[i][1]);
+        for (i = 0; i < receivesymrow; i++) {
+            table_receive(i, m_estimate[i][0],m_estimate[i][1]);
+            if ( i == 0 || i == 1) printf("receive_sym[%d]= %d %d %d %d\n",i,receive_sym[i][0],receive_sym[i][1],receive_sym[i][2],receive_sym[i][3]);
+        }
+        for (i = 0; i < codarraylen; i++) recieve_codarray[i] = receive_sym[i/4][i%4];*/
+        
+        for (i = 0; i < Ljlen; i++) {
             //printf("i = %d\n",i);
-            if ((i % 2) == 0) {
+            if ((i % 4) == 0) {
                 //FOR L1
-                d1 = pow((x_receive[i / 2][0] + 3*Q),2) + pow((x_receive[i/2][1] + 1*Q),2);        // X1 = 0
-                d2 = pow((x_receive[i / 2][0] + 1*Q),2) + pow((x_receive[i/2][1] + 1*Q),2);
-                d3 = pow((x_receive[i / 2][0] + 3*Q),2) + pow((x_receive[i/2][1] - 1*Q),2);
-                d4 = pow((x_receive[i / 2][0] + 1*Q),2) + pow((x_receive[i/2][1] - 1*Q),2);
-                d5 = pow((x_receive[i / 2][0] + 3*Q),2) + pow((x_receive[i/2][1] + 3*Q),2);
-                d6 = pow((x_receive[i / 2][0] + 1*Q),2) + pow((x_receive[i/2][1] + 3*Q),2);
-                d7 = pow((x_receive[i / 2][0] + 3*Q),2) + pow((x_receive[i/2][1] - 3*Q),2);
-                d8 = pow((x_receive[i / 2][0] + 1*Q),2) + pow((x_receive[i/2][1] - 3*Q),2);
+                c1 = pow((x_receive[i / 4][0] + outd),2) + pow((x_receive[i/4][1] + ind),2);        // X1 = 0
+                c2 = pow((x_receive[i / 4][0] + ind),2) + pow((x_receive[i/4][1] + ind),2);
+                c3 = pow((x_receive[i / 4][0] + outd),2) + pow((x_receive[i/4][1] - ind),2);
+                c4 = pow((x_receive[i / 4][0] + ind),2) + pow((x_receive[i/4][1] - ind),2);
+                c5 = pow((x_receive[i / 4][0] + outd),2) + pow((x_receive[i/4][1] + outd),2);
+                c6 = pow((x_receive[i / 4][0] + ind),2) + pow((x_receive[i/4][1] + outd),2);
+                c7 = pow((x_receive[i / 4][0] + outd),2) + pow((x_receive[i/4][1] - outd),2);
+                c8 = pow((x_receive[i / 4][0] + ind),2) + pow((x_receive[i/4][1] - outd),2);
 
-                s1 = pow((x_receive[i / 2][0] - 3*Q),2) + pow((x_receive[i/2][1] + 1*Q),2);         // X1 = 1
-                s2 = pow((x_receive[i / 2][0] - 1*Q),2) + pow((x_receive[i/2][1] + 1*Q),2);
-                s3 = pow((x_receive[i / 2][0] - 1*Q),2) + pow((x_receive[i/2][1] - 1*Q),2);
-                s4 = pow((x_receive[i / 2][0] - 3*Q),2) + pow((x_receive[i/2][1] - 1*Q),2);
-                s5 = pow((x_receive[i / 2][0] - 3*Q),2) + pow((x_receive[i/2][1] + 3*Q),2);
-                s6 = pow((x_receive[i / 2][0] - 1*Q),2) + pow((x_receive[i/2][1] + 3*Q),2);
-                s7 = pow((x_receive[i / 2][0] - 1*Q),2) + pow((x_receive[i/2][1] - 3*Q),2);
-                s8 = pow((x_receive[i / 2][0] - 3*Q),2) + pow((x_receive[i/2][1] - 3*Q),2);
-                if(i == 0||i==2)printf("%g,%g,%g,%g,%g,%g,%g,%g\n",d1,d2,d3,d4,d5,d6,d7,d8);
-                if(i==0||i == 2)printf("%g,%g,%g,%g,%g,%g,%g,%g\n",s1,s2,s3,s4,s5,s6,s7,s8);
-                
-                if(i==0||i==2)printf("%g %g %g\n",minimum(d1,d2,d3,d4,d5,d6,d7,d8),minimum(s1,s2,s3,s4,s5,s6,s7,s8),- minimum(d1,d2,d3,d4,d5,d6,d7,d8) + minimum(s1,s2,s3,s4,s5,s6,s7,s8));
-                tempmin = - minimum(d1,d2,d3,d4,d5,d6,d7,d8) + minimum(s1,s2,s3,s4,s5,s6,s7,s8);
-                Lj[i] = 0.4 * 0.5 * ebn0 * ((-1)* minimum(d1,d2,d3,d4,d5,d6,d7,d8) + minimum(s1,s2,s3,s4,s5,s6,s7,s8));    // L1 : for first bit in symbol 
-                Lj[i] = 0.4 * 0.5 * ebn0 * tempmin;
-                if(i==0||i==2)printf("ebn0= %g Lj[%d]=%g \n",ebn0,i,Lj[i]);
+                s1 = pow((x_receive[i / 4][0] - outd),2) + pow((x_receive[i/4][1] + ind),2);         // X1 = 1
+                s2 = pow((x_receive[i / 4][0] - ind),2) + pow((x_receive[i/4][1] + ind),2);
+                s3 = pow((x_receive[i / 4][0] - ind),2) + pow((x_receive[i/4][1] - ind),2);
+                s4 = pow((x_receive[i / 4][0] - outd),2) + pow((x_receive[i/4][1] - ind),2);
+                s5 = pow((x_receive[i / 4][0] - outd),2) + pow((x_receive[i/4][1] + outd),2);
+                s6 = pow((x_receive[i / 4][0] - ind),2) + pow((x_receive[i/4][1] + outd),2);
+                s7 = pow((x_receive[i / 4][0] - ind),2) + pow((x_receive[i/4][1] - outd),2);
+                s8 = pow((x_receive[i / 4][0] - outd),2) + pow((x_receive[i/4][1] - outd),2);
+                //printf("%g,%g,%g,%g,%g,%g,%g,%g\n",d1,d2,d3,d4,d5,d6,d7,d8);
+                Lj[i] =4/Es *0.5 * ebn0 * (- minimum(c1,c2,c3,c4,c5,c6,c7,c8) + minimum(s1,s2,s3,s4,s5,s6,s7,s8));    // L1 : for first bit in symbol 
                 //printf("%g %g \n",minimum(d1,d2,d3,d4,d5,d6,d7,d8),minimum(s1,s2,s3,s4,s5,s6,s7,s8));
-            } else if ((i % 2) == 1) {
+            } else if ((i % 4) == 1) {
                 //FOR L2
-                s1 = pow((x_receive[i / 2][0] + 3*Q),2) + pow((x_receive[i/2][1] + 1*Q),2);         // X1 = 0
-                s2 = pow((x_receive[i / 2][0] + 1*Q),2) + pow((x_receive[i/2][1] + 1*Q),2);
-                s3 = pow((x_receive[i / 2][0] - 1*Q),2) + pow((x_receive[i/2][1] + 1*Q),2);
-                s4 = pow((x_receive[i / 2][0] - 3*Q),2) + pow((x_receive[i/2][1] + 1*Q),2);
-                s5 = pow((x_receive[i / 2][0] + 3*Q),2) + pow((x_receive[i/2][1] + 3*Q),2);
-                s6 = pow((x_receive[i / 2][0] + 1*Q),2) + pow((x_receive[i/2][1] + 3*Q),2);
-                s7 = pow((x_receive[i / 2][0] - 1*Q),2) + pow((x_receive[i/2][1] + 3*Q),2);
-                s8 = pow((x_receive[i / 2][0] - 3*Q),2) + pow((x_receive[i/2][1] + 3*Q),2);
-                d1 = pow((x_receive[i / 2][0] + 3*Q),2) + pow((x_receive[i/2][1] - 1*Q),2);         // X1 = 1
-                d2 = pow((x_receive[i / 2][0] + 1*Q),2) + pow((x_receive[i/2][1] - 1*Q),2);
-                d3 = pow((x_receive[i / 2][0] - 1*Q),2) + pow((x_receive[i/2][1] - 1*Q),2);
-                d4 = pow((x_receive[i / 2][0] - 3*Q),2) + pow((x_receive[i/2][1] - 1*Q),2);
-                d5 = pow((x_receive[i / 2][0] + 3*Q),2) + pow((x_receive[i/2][1] - 3*Q),2);
-                d6 = pow((x_receive[i / 2][0] + 1*Q),2) + pow((x_receive[i/2][1] - 3*Q),2);
-                d7 = pow((x_receive[i / 2][0] - 1*Q),2) + pow((x_receive[i/2][1] - 3*Q),2);
-                d8 = pow((x_receive[i / 2][0] - 3*Q),2) + pow((x_receive[i/2][1] - 3*Q),2);
-                if(i == 1||i==3)printf("%g,%g,%g,%g,%g,%g,%g,%g\n",d1,d2,d3,d4,d5,d6,d7,d8);
-                if(i==1||i == 3)printf("%g,%g,%g,%g,%g,%g,%g,%g\n",s1,s2,s3,s4,s5,s6,s7,s8);
-                
-                if(i==1||i==3)printf("%g %g %g\n",minimum(d1,d2,d3,d4,d5,d6,d7,d8),minimum(s1,s2,s3,s4,s5,s6,s7,s8),- minimum(d1,d2,d3,d4,d5,d6,d7,d8) + minimum(s1,s2,s3,s4,s5,s6,s7,s8));
-                tempmin = - minimum(d1,d2,d3,d4,d5,d6,d7,d8) + minimum(s1,s2,s3,s4,s5,s6,s7,s8);
-                Lj[i] = 0.4 * 0.5 * ebn0 * (- minimum(d1,d2,d3,d4,d5,d6,d7,d8) + minimum(s1,s2,s3,s4,s5,s6,s7,s8));    // L2 : for first bit in symbol 
-                if(i==1||i==3)printf("ebn0= %g Lj[%d]=%g \n",ebn0,i,Lj[i]);
-            }
-        } // END FOR LLR
-        for (i = Ljlen/2; i < Ljlen; i++) {
-            if ((i % 2) == 0) {
+                s1 = pow((x_receive[i / 4][0] + outd),2) + pow((x_receive[i/4][1] + ind),2);         // X1 = 0
+                s2 = pow((x_receive[i / 4][0] + ind),2) + pow((x_receive[i/4][1] + ind),2);
+                s3 = pow((x_receive[i / 4][0] - ind),2) + pow((x_receive[i/4][1] + ind),2);
+                s4 = pow((x_receive[i / 4][0] - outd),2) + pow((x_receive[i/4][1] + ind),2);
+                s5 = pow((x_receive[i / 4][0] + outd),2) + pow((x_receive[i/4][1] + outd),2);
+                s6 = pow((x_receive[i / 4][0] + ind),2) + pow((x_receive[i/4][1] + outd),2);
+                s7 = pow((x_receive[i / 4][0] - ind),2) + pow((x_receive[i/4][1] + outd),2);
+                s8 = pow((x_receive[i / 4][0] - outd),2) + pow((x_receive[i/4][1] + outd),2);
+                c1 = pow((x_receive[i / 4][0] + outd),2) + pow((x_receive[i/4][1] - ind),2);         // X1 = 1
+                c2 = pow((x_receive[i / 4][0] + ind),2) + pow((x_receive[i/4][1] - ind),2);
+                c3 = pow((x_receive[i / 4][0] - ind),2) + pow((x_receive[i/4][1] - ind),2);
+                c4 = pow((x_receive[i / 4][0] - outd),2) + pow((x_receive[i/4][1] - ind),2);
+                c5 = pow((x_receive[i / 4][0] + outd),2) + pow((x_receive[i/4][1] - outd),2);
+                c6 = pow((x_receive[i / 4][0] + ind),2) + pow((x_receive[i/4][1] - outd),2);
+                c7 = pow((x_receive[i / 4][0] - ind),2) + pow((x_receive[i/4][1] - outd),2);
+                c8 = pow((x_receive[i / 4][0] - outd),2) + pow((x_receive[i/4][1] - outd),2);
+                Lj[i] = 4/Es *0.5 * ebn0 * (- minimum(c1,c2,c3,c4,c5,c6,c7,c8) + minimum(s1,s2,s3,s4,s5,s6,s7,s8));    // L2 : for first bit in symbol 
+            } else if ((i % 4) == 2) {
                 //FOR L3
-                d1 = pow((x_receive[i / 2 - 1844][0] + 3*Q),2) + pow((x_receive[i/2 - 1844][1] + 1*Q),2);        // X3 = 0
-                d2 = pow((x_receive[i / 2 - 1844][0] - 1*Q),2) + pow((x_receive[i/2 - 1844][1] + 1*Q),2);
-                d3 = pow((x_receive[i / 2 - 1844][0] + 3*Q),2) + pow((x_receive[i/2 - 1844][1] - 1*Q),2);
-                d4 = pow((x_receive[i / 2 - 1844][0] - 1*Q),2) + pow((x_receive[i/2 - 1844][1] - 1*Q),2);
-                d5 = pow((x_receive[i / 2 - 1844][0] + 3*Q),2) + pow((x_receive[i/2 - 1844][1] + 3*Q),2);
-                d6 = pow((x_receive[i / 2 - 1844][0] - 1*Q),2) + pow((x_receive[i/2 - 1844][1] + 3*Q),2);
-                d7 = pow((x_receive[i / 2 - 1844][0] + 3*Q),2) + pow((x_receive[i/2 - 1844][1] - 3*Q),2);
-                d8 = pow((x_receive[i / 2 - 1844][0] - 1*Q),2) + pow((x_receive[i/2 - 1844][1] - 3*Q),2);
+                c1 = pow((x_receive[i / 4][0] + outd),2) + pow((x_receive[i/4][1] + ind),2);        // X3 = 0
+                c2 = pow((x_receive[i / 4][0] - ind),2) + pow((x_receive[i/4][1] + ind),2);
+                c3 = pow((x_receive[i / 4][0] + outd),2) + pow((x_receive[i/4][1] - ind),2);
+                c4 = pow((x_receive[i / 4][0] - ind),2) + pow((x_receive[i/4][1] - ind),2);
+                c5 = pow((x_receive[i / 4][0] + outd),2) + pow((x_receive[i/4][1] + outd),2);
+                c6 = pow((x_receive[i / 4][0] - ind),2) + pow((x_receive[i/4][1] + outd),2);
+                c7 = pow((x_receive[i / 4][0] + outd),2) + pow((x_receive[i/4][1] - outd),2);
+                c8 = pow((x_receive[i / 4][0] - ind),2) + pow((x_receive[i/4][1] - outd),2);
 
-                s1 = pow((x_receive[i / 2 - 1844][0] + 1*Q),2) + pow((x_receive[i/ 2 - 1844][1] + 1*Q),2);         // X3 = 1
-                s2 = pow((x_receive[i / 2 - 1844][0] - 3*Q),2) + pow((x_receive[i/2 - 1844][1] + 1*Q),2);
-                s3 = pow((x_receive[i / 2 - 1844][0] + 1*Q),2) + pow((x_receive[i/2 - 1844][1] - 1*Q),2);
-                s4 = pow((x_receive[i / 2 - 1844][0] - 3*Q),2) + pow((x_receive[i/2 - 1844][1] - 1*Q),2);
-                s5 = pow((x_receive[i / 2 - 1844][0] + 1*Q),2) + pow((x_receive[i/2 - 1844][1] + 3*Q),2);
-                s6 = pow((x_receive[i / 2 - 1844][0] - 3*Q),2) + pow((x_receive[i/2 - 1844][1] + 3*Q),2);
-                s7 = pow((x_receive[i / 2 - 1844][0] + 1*Q),2) + pow((x_receive[i/2 - 1844][1] - 3*Q),2);
-                s8 = pow((x_receive[i / 2 - 1844][0] - 3*Q),2) + pow((x_receive[i/2 - 1844][1] - 3*Q),2);
-                Lj[i] = 0.4 * 0.5 * ebn0 * (- minimum(d1,d2,d3,d4,d5,d6,d7,d8) + minimum(s1,s2,s3,s4,s5,s6,s7,s8));    // L3 : for first bit in symbol 
-            } else if ((i % 2) == 1) {
+                s1 = pow((x_receive[i / 4][0] + ind),2) + pow((x_receive[i/4][1] + ind),2);         // X3 = 1
+                s2 = pow((x_receive[i / 4][0] - outd),2) + pow((x_receive[i/4][1] + ind),2);
+                s3 = pow((x_receive[i / 4][0] + ind),2) + pow((x_receive[i/4][1] - ind),2);
+                s4 = pow((x_receive[i / 4][0] - outd),2) + pow((x_receive[i/4][1] - ind),2);
+                s5 = pow((x_receive[i / 4][0] + ind),2) + pow((x_receive[i/4][1] + outd),2);
+                s6 = pow((x_receive[i / 4][0] - outd),2) + pow((x_receive[i/4][1] + outd),2);
+                s7 = pow((x_receive[i / 4][0] + ind),2) + pow((x_receive[i/4][1] - outd),2);
+                s8 = pow((x_receive[i / 4][0] - outd),2) + pow((x_receive[i/4][1] - outd),2);
+                Lj[i] = 4/Es *0.5 * ebn0 * (- minimum(c1,c2,c3,c4,c5,c6,c7,c8) + minimum(s1,s2,s3,s4,s5,s6,s7,s8));    // L3 : for first bit in symbol 
+            } else if ((i % 4) == 3) {
                 //FOR L4
-                s1 = pow((x_receive[i / 2 - 1844][0] + 3*Q),2) + pow((x_receive[i/2 - 1844][1] - 1*Q),2);         // X1 = 0
-                s2 = pow((x_receive[i / 2 - 1844][0] + 1*Q),2) + pow((x_receive[i/2 - 1844][1] - 1*Q),2);
-                s3 = pow((x_receive[i / 2 - 1844][0] - 1*Q),2) + pow((x_receive[i/2 - 1844][1] - 1*Q),2);
-                s4 = pow((x_receive[i / 2 - 1844][0] - 3*Q),2) + pow((x_receive[i/2 - 1844][1] - 1*Q),2);
-                s5 = pow((x_receive[i / 2 - 1844][0] + 3*Q),2) + pow((x_receive[i/2 - 1844][1] + 3*Q),2);
-                s6 = pow((x_receive[i / 2 - 1844][0] + 1*Q),2) + pow((x_receive[i/2 - 1844][1] + 3*Q),2);
-                s7 = pow((x_receive[i / 2 - 1844][0] - 1*Q),2) + pow((x_receive[i/2 - 1844][1] + 3*Q),2);
-                s8 = pow((x_receive[i / 2 - 1844][0] - 3*Q),2) + pow((x_receive[i/2 - 1844][1] + 3*Q),2);
+                s1 = pow((x_receive[i / 4][0] + outd),2) + pow((x_receive[i/4][1] - ind),2);         // X1 = 0
+                s2 = pow((x_receive[i / 4][0] + ind),2) + pow((x_receive[i/4][1] - ind),2);
+                s3 = pow((x_receive[i / 4][0] - ind),2) + pow((x_receive[i/4][1] - ind),2);
+                s4 = pow((x_receive[i / 4][0] - outd),2) + pow((x_receive[i/4][1] - ind),2);
+                s5 = pow((x_receive[i / 4][0] + outd),2) + pow((x_receive[i/4][1] + outd),2);
+                s6 = pow((x_receive[i / 4][0] + ind),2) + pow((x_receive[i/4][1] + outd),2);
+                s7 = pow((x_receive[i / 4][0] - ind),2) + pow((x_receive[i/4][1] + outd),2);
+                s8 = pow((x_receive[i / 4][0] - outd),2) + pow((x_receive[i/4][1] + outd),2);
 
-                d1 = pow((x_receive[i / 2 - 1844][0] + 3*Q),2) + pow((x_receive[i/2 - 1844][1] + 1*Q),2);         // X1 = 1
-                d2 = pow((x_receive[i / 2 - 1844][0] + 1*Q),2) + pow((x_receive[i/2 - 1844][1] + 1*Q),2);
-                d3 = pow((x_receive[i / 2 - 1844][0] - 1*Q),2) + pow((x_receive[i/2 - 1844][1] + 1*Q),2);
-                d4 = pow((x_receive[i / 2 - 1844][0] - 3*Q),2) + pow((x_receive[i/2 - 1844][1] + 1*Q),2);
-                d5 = pow((x_receive[i / 2 - 1844][0] + 3*Q),2) + pow((x_receive[i/2 - 1844][1] - 3*Q),2);
-                d6 = pow((x_receive[i / 2 - 1844][0] + 1*Q),2) + pow((x_receive[i/2 - 1844][1] - 3*Q),2);
-                d7 = pow((x_receive[i / 2 - 1844][0] - 1*Q),2) + pow((x_receive[i/2 - 1844][1] - 3*Q),2);
-                d8 = pow((x_receive[i / 2 - 1844][0] - 3*Q),2) + pow((x_receive[i/2 - 1844][1] - 3*Q),2);
-                Lj[i] = 0.4 * 0.5 * ebn0 * (- minimum(d1,d2,d3,d4,d5,d6,d7,d8) + minimum(s1,s2,s3,s4,s5,s6,s7,s8));    // L4 : for first bit in symbol 
-            }
-        }
+                c1 = pow((x_receive[i / 4][0] + outd),2) + pow((x_receive[i/4][1] + ind),2);         // X1 = 1
+                c2 = pow((x_receive[i / 4][0] + ind),2) + pow((x_receive[i/4][1] + ind),2);
+                c3 = pow((x_receive[i / 4][0] - ind),2) + pow((x_receive[i/4][1] + ind),2);
+                c4 = pow((x_receive[i / 4][0] - outd),2) + pow((x_receive[i/4][1] + ind),2);
+                c5 = pow((x_receive[i / 4][0] + outd),2) + pow((x_receive[i/4][1] - outd),2);
+                c6 = pow((x_receive[i / 4][0] + ind),2) + pow((x_receive[i/4][1] - outd),2);
+                c7 = pow((x_receive[i / 4][0] - ind),2) + pow((x_receive[i/4][1] - outd),2);
+                c8 = pow((x_receive[i / 4][0] - outd),2) + pow((x_receive[i/4][1] - outd),2);
+                Lj[i] = 4/Es *0.5 * ebn0 * (- minimum(c1,c2,c3,c4,c5,c6,c7,c8) + minimum(s1,s2,s3,s4,s5,s6,s7,s8));    // L4 : for first bit in symbol 
+            } else Lj[i] = 0;
+        } // END FOR LLR
 
         // the interative decoding algotrithm
         for (j = 0; j < qij1column; j++)                             // initialization
@@ -644,15 +639,19 @@ printf("column = %d; row = %d\n", n, rc);
             //printf("restart =%d\n",restart);
         
         }// end for iteration
-        printf("errorblock = %d num %d \n",error_block,num);
+        printf("1.txt errorblock = %d num %d \n",error_block,num);
         error1 = 0;
         error2 = 0;
         for(i = 0; i < n/2; i++) if (output[i] != codarray[i]) error1 += 1;
         for(i = n/2; i < n; i++) if (output[i] != codarray[i]) error2 += 1;
         if (error2 != 0) {
             error_block++;
-            printf("error1 = %d \n",error1);
+            //printf("error1 = %d \n",error1);
+            //printf("error2 = %d \n",error2);
         }
+        if (error1 !=0) printf("error1 = %d \n",error1);
+        if (error2 !=0) printf("error2 = %d \n",error2);
+        if (error1 != 0 || error2 != 0) fers++;
         restart = 0;
         totalerror1 += error1;
         totalerror2 += error2;
@@ -660,23 +659,27 @@ printf("column = %d; row = %d\n", n, rc);
         outfp2 = fopen("QAM16_UEP_label2_LEVEL1_iteration=100.txt","a");
         fprintf(outfp2,"SNR = %g ; totalerror1 = %d; totalerror2 = %d\n", ebn0s, totalerror1, totalerror2);
         fclose(outfp2);*/
+        FILE *outfp2; 
+        outfp2 = fopen("QAM16_UEP_label2_LEVEL2_totalerror_alpha=1.04713.txt","a");
+        if(error2!=0)fprintf(outfp2,"SNR = %g ; totalerror1 = %d; totalerror2 = %d\n", ebn0s, totalerror1, totalerror2);
+        fclose(outfp2);
     }
     BER1 = (double)totalerror1/(num*n);
     BER2 = (double)totalerror2/(num*n);
     FER1 = (double)100.0/num;
-    //FER2 = (double)100.0/num;
+    FER2 = (double)fers/num;
     printf("totalerror1 = %d, BER1 = %g, FER = %g\n",totalerror1,BER1,FER1);
     printf("totalerror2 = %d, BER2 = %g, FER = %g\n",totalerror2,BER2,FER1);
     FILE *outfp1; 
-        outfp1 = fopen("QAM16_UEP_label2_LEVEL2_vr2.txt","a");
-        fprintf(outfp1,"SNR = %g ; BER1 = %g ;BER2 = %g ; FER = %g\n", ebn0s, BER1,BER2,FER1);
+        outfp1 = fopen("QAM16_UEP_label2_LEVEL2_coef_alpha=1.04713.txt","a");
+        fprintf(outfp1,"SNR = %g ; BER1 = %g ;BER2 = %g ; FER = %g ; FERALL = %g \n", ebn0s, BER1,BER2,FER1,FER2);
     fclose(outfp1);
     return 0;
 }
 
-double Ranq1() 
-{
-    if (RANI == 0) {
+double Ranq1(){
+    if (RANI == 0)
+    {
         RANV = SEED ^ 4101842887655102017LL;
         RANV ^= RANV >> 21;
         RANV ^= RANV << 35;
@@ -709,86 +712,118 @@ void normal(double sig, double *n1, double *n2)
 }
 
 void table_symbol(int i, int a, int b, int c, int d)
-{
+{   //printf("d1 = %g \n",d1);
     if (a == 1 && b == 1 && c == 0 && d == 1)
     {
-        s[i][0] = 1*Q;
-        s[i][1] = -3*Q;
+        //s[i][0] = 1*Q;
+        //s[i][1] = -3*Q;
+        s[i][0] = d1/2;
+        s[i][1] = -d1/2-d2;
     }
     else if (a == 1 && b == 1 && c == 0 && d == 0)
     {
-        s[i][0] = 1*Q;
-        s[i][1] = -1*Q;
+        //s[i][0] = 1*Q;
+        //s[i][1] = -1*Q;
+        s[i][0] = d1/2;
+        s[i][1] = -d1/2;
     }
     else if (a == 1 && b == 1 && c == 1 && d == 0)
     {
-        s[i][0] = 3*Q;
-        s[i][1] = -1*Q;
+        //s[i][0] = 3*Q;
+        //s[i][1] = -1*Q;
+        s[i][0] = d1/2+d2;
+        s[i][1] = -d1/2;
     }
     else if (a == 1 && b == 1 && c == 1 && d == 1)
     {
-        s[i][0] = 3*Q;
-        s[i][1] = -3*Q;
+        //s[i][0] = 3*Q;
+        //s[i][1] = -3*Q;
+        s[i][0] = d1/2+d2;
+        s[i][1] = -d1/2-d2;
     }
     else if (a == 1 && b == 0 && c == 0 && d == 1)
     {
-        s[i][0] = 1*Q;
-        s[i][1] = 1*Q;
+        //s[i][0] = 1*Q;
+        //s[i][1] = 1*Q;
+        s[i][0] = d1/2;
+        s[i][1] = d1/2;
     }
     else if (a == 1 && b == 0 && c == 0 && d == 0)
     {
-        s[i][0] = 1*Q;
-        s[i][1] = 3*Q;
+        //s[i][0] = 1*Q;
+        //s[i][1] = 3*Q;
+        s[i][0] = d1/2;
+        s[i][1] = d1/2+d2;
     }
     else if (a == 1 && b == 0 && c == 1 && d == 0)
     {
-        s[i][0] = 3*Q;
-        s[i][1] = 3*Q;
+        //s[i][0] = 3*Q;
+        //s[i][1] = 3*Q;
+        s[i][0] = d1/2+d2;
+        s[i][1] = d1/2+d2;
     }
     else if (a == 1 && b == 0 && c == 1 && d == 1)
     {
-        s[i][0] = 3*Q;
-        s[i][1] = 1*Q;
+        //s[i][0] = 3*Q;
+        //s[i][1] = 1*Q;
+        s[i][0] = d1/2+d2;
+        s[i][1] = d1/2;
     }
     else if (a == 0 && b == 0 && c == 0 && d == 1)
     {
-        s[i][0] = -3*Q;
-        s[i][1] = 1*Q;
+        //s[i][0] = -3*Q;
+        //s[i][1] = 1*Q;
+        s[i][0] = -d1/2-d2;
+        s[i][1] = d1/2;
     }
     else if (a == 0 && b == 0 && c == 0 && d == 0)
     {
-        s[i][0] = -3*Q;
-        s[i][1] = 3*Q;
+        //s[i][0] = -3*Q;
+        //s[i][1] = 3*Q;
+        s[i][0] = -d1/2-d2;
+        s[i][1] = d1/2+d2;
     }
     else if (a == 0 && b == 0 && c == 1 && d == 0)
     {
-        s[i][0] = -1*Q;
-        s[i][1] = 3*Q;
+        //s[i][0] = -1*Q;
+        //s[i][1] = 3*Q;
+        s[i][0] = -d1/2;
+        s[i][1] = d1/2+d2;
     }
     else if (a == 0 && b == 0 && c == 1 && d == 1)
     {
-        s[i][0] = -1*Q;
-        s[i][1] = 1*Q;
+        //s[i][0] = -1*Q;
+        //s[i][1] = 1*Q;
+        s[i][0] = -d1/2;
+        s[i][1] = d1/2;
     }
     else if (a == 0 && b == 1 && c == 0 && d == 1)
     {
-        s[i][0] = -3*Q;
-        s[i][1] = -3*Q;
+        //s[i][0] = -3*Q;
+        //s[i][1] = -3*Q;
+        s[i][0] = -d1/2-d2;
+        s[i][1] = -d1/2-d2;
     }
     else if (a == 0 && b == 1 && c == 0 && d == 0)
     {
-        s[i][0] = -3*Q;
-        s[i][1] = -1*Q;
+        //s[i][0] = -3*Q;
+        //s[i][1] = -1*Q;
+        s[i][0] = -d1/2-d2;
+        s[i][1] = -d1/2;
     }
     else if (a == 0 && b == 1 && c == 1 && d == 0)
     {
-        s[i][0] = -1*Q;
-        s[i][1] = -1*Q;
+        //s[i][0] = -1*Q;
+        //s[i][1] = -1*Q;
+        s[i][0] = -d1/2;
+        s[i][1] = -d1/2;
     }
     else if (a == 0 && b == 1 && c == 1 && d == 1)
     {
-        s[i][0] = -1*Q;
-        s[i][1] = -3*Q;
+        //s[i][0] = -1*Q;
+        //s[i][1] = -3*Q;
+        s[i][0] = -d1/2;
+        s[i][1] = -d1/2-d2;
     }
     else
     {
@@ -796,8 +831,6 @@ void table_symbol(int i, int a, int b, int c, int d)
         s[i][1] = -0*Q;
     }
 }
-
-
 double minimum(double a1, double a2, double a3, double a4, double a5, double a6, double a7, double a8) {
     double min = a1;
     if (min > a2) min = a2;
